@@ -56,7 +56,7 @@ class HomeworkNotList(Exception):
         )
 
 
-class HomeworksNotInList(Exception):
+class HomeworksNotInResponse(Exception):
     def __init__(self):
         super().__init__(
             '"Homeworks" отсутствует в словаре'

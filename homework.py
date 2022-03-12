@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def send_message(bot, message):
+    """Посылает сообщение в телеграм"""
     logger.info('Сообщение отправляется')
     try:
         bot.send_message(
@@ -41,35 +42,42 @@ def send_message(bot, message):
             text=message,
         )
     except Exception as error:
+        logger.exception('Ошибка при отправке сообщения')
         raise my_ex.MessageSendError from error
     else:
         logger.info('Сообщение отправлено!')
 
 
 def get_api_answer(current_timestamp):
+    """Делает запрос к API и проверяет на ошибки"""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     except Exception as error:
-        logger.exception('Эндпоинт шалит')
+        logger.exception('Проблема с доступом к эндпоинту')
         raise my_ex.ErrorWithEndpoint from error
     else:
         if response.status_code != 200:
+            logger.error('Код ответа не 200')
             raise my_ex.NotOKError(response.status_code)
         return response.json()
 
 
 def check_response(response):
+    """Проверяет ответ на ошибки"""
     if type(response['homeworks']) is not list:
+        logger.error('В ключе "homeworks" не лист')
         raise my_ex.HomeworkNotList
     if 'homeworks' not in response:
-        raise my_ex.HomeworksNotInList
+        logger.error('"homeworks" не лист')
+        raise my_ex.HomeworksNotInResponse
     else:
         return response.get('homeworks')
 
 
 def parse_status(homework):
+    """Получает статус домашки и возвращает сообщение для бота"""
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
     verdict = HOMEWORK_STATUSES[homework_status]
@@ -77,6 +85,7 @@ def parse_status(homework):
 
 
 def check_tokens():
+    """Проверяет необходимые токены"""
     tokens = [
         PRACTICUM_TOKEN,
         TELEGRAM_TOKEN,
@@ -86,17 +95,16 @@ def check_tokens():
 
 
 def send_error(error, bot):
+    """Отправяляет ошибки в телеграм"""
     message = f'Сбой в работе программы: {error}'
     send_message(bot, message)
-    time.sleep(RETRY_TIME)
 
 
 def main():
     """Основная логика работы бота."""
-
     if check_tokens():
         bot = telegram.Bot(token=TELEGRAM_TOKEN)
-        current_timestamp = 10
+        current_timestamp = int(time.time())
     else:
         logger.critical('Отсутствует обязательная переменная окружения')
         sys.exit()
@@ -124,26 +132,8 @@ def main():
                 else:
                     logger.debug('В ответе отсутсвуют новые статусы')
             current_timestamp = int(time.time())
-        except my_ex.ErrorWithEndpoint as error:
-            logger.exception('Проблема с доступом к эндпоинту')
+        except Exception as error:
             send_error(error, bot)
-            raise
-        except my_ex.HomeworksNotInList as error:
-            logger.exception('"homeworks" отсутствует')
-            send_error(error, bot)
-            raise
-        except my_ex.HomeworkNotList as error:
-            logger.exception('Под ключом "homework" – не лист')
-            send_error(error, bot)
-            raise
-        except my_ex.NotOKError as error:
-            logger.exception('Код ответа не 200')
-            send_error(error, bot)
-            raise
-        except my_ex.MessageSendError as error:
-            logger.exception('Ошибка при отправке сообщения')
-            send_error(error, bot)
-            raise
         finally:
             time.sleep(RETRY_TIME)
 
