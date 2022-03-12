@@ -11,7 +11,7 @@ try:
 
     import my_ex
 except ImportError as error:
-    logging.error(f'Ошибка при импорте {error}', exc_info=True)
+    logging.error(f'Ошибка при импорте {error}')
 
 load_dotenv()
 
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def send_message(bot, message):
-    """Посылает сообщение в телеграм"""
+    """Посылает сообщение в телеграм."""
     logger.info('Сообщение отправляется')
     try:
         bot.send_message(
@@ -49,7 +49,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(current_timestamp):
-    """Делает запрос к API и проверяет на ошибки"""
+    """Делает запрос к API и проверяет на ошибки."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     try:
@@ -65,7 +65,7 @@ def get_api_answer(current_timestamp):
 
 
 def check_response(response):
-    """Проверяет ответ на ошибки"""
+    """Проверяет ответ на ошибки."""
     if type(response['homeworks']) is not list:
         logger.error('В ключе "homeworks" не лист')
         raise my_ex.HomeworkNotList
@@ -77,7 +77,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Получает статус домашки и возвращает сообщение для бота"""
+    """Получает статус домашки и возвращает сообщение для бота."""
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
     verdict = HOMEWORK_STATUSES[homework_status]
@@ -85,7 +85,7 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """Проверяет необходимые токены"""
+    """Проверяет необходимые токены."""
     tokens = [
         PRACTICUM_TOKEN,
         TELEGRAM_TOKEN,
@@ -95,7 +95,7 @@ def check_tokens():
 
 
 def send_error(error, bot):
-    """Отправяляет ошибки в телеграм"""
+    """Отправяляет ошибки в телеграм."""
     message = f'Сбой в работе программы: {error}'
     send_message(bot, message)
 
