@@ -1,17 +1,14 @@
-try:
-    import logging
-    import logging.config
-    import os
-    import sys
-    import time
+import logging
+import logging.config
+import os
+import sys
+import time
 
-    import requests
-    import telegram
-    from dotenv import load_dotenv
+import requests
+import telegram
+from dotenv import load_dotenv
 
-    import my_ex
-except ImportError as error:
-    logging.error(f'Ошибка при импорте {error}')
+import my_ex
 
 load_dotenv()
 
@@ -41,11 +38,10 @@ def send_message(bot, message):
             chat_id=TELEGRAM_CHAT_ID,
             text=message,
         )
+        logger.info('Сообщение отправлено!')
     except Exception as error:
         logger.exception('Ошибка при отправке сообщения')
         raise my_ex.MessageSendError from error
-    else:
-        logger.info('Сообщение отправлено!')
 
 
 def get_api_answer(current_timestamp):
@@ -54,23 +50,27 @@ def get_api_answer(current_timestamp):
     params = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-    except Exception as error:
-        logger.exception('Проблема с доступом к эндпоинту')
-        raise my_ex.ErrorWithEndpoint from error
-    else:
         if response.status_code != 200:
             logger.error('Код ответа не 200')
             raise my_ex.NotOKError(response.status_code)
+    except Exception as error:
+        logger.exception('Проблема с доступом к эндпоинту')
+        raise my_ex.ErrorWithEndpoint from error
+
+    try:
         return response.json()
+    except Exception as error:
+        logger.exception('Ответ не в формате json')
+        raise my_ex.ResponseNotJSON from error
 
 
 def check_response(response):
     """Проверяет ответ на ошибки."""
-    if type(response['homeworks']) is not list:
-        logger.error('В ключе "homeworks" не лист')
+    if not isinstance(response['homeworks'], list):
+        logger.error('В ключе homeworks не лист')
         raise my_ex.HomeworkNotList
     if 'homeworks' not in response:
-        logger.error('"homeworks" не лист')
+        logger.error('homeworks отсутствует в ответе')
         raise my_ex.HomeworksNotInResponse
     else:
         return response.get('homeworks')
@@ -78,8 +78,21 @@ def check_response(response):
 
 def parse_status(homework):
     """Получает статус домашки и возвращает сообщение для бота."""
+    keys = [
+        'homework_name',
+        'status'
+    ]
+    for key in keys:
+        if key not in homework:
+            logger.error(f'Нет ожидаемого ключа: {key}')
+            raise KeyError
+
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
+
+    if homework_status not in HOMEWORK_STATUSES:
+        logger.error('В ответе обнаружен недокументированный статус')
+        raise my_ex.UndocumentedStatus
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -102,15 +115,14 @@ def send_error(error, bot):
 
 def main():
     """Основная логика работы бота."""
-    if check_tokens():
-        bot = telegram.Bot(token=TELEGRAM_TOKEN)
-        current_timestamp = int(time.time())
-    else:
+    if not check_tokens():
         logger.critical('Отсутствует обязательная переменная окружения')
         sys.exit()
 
-    current_report = {'homework_name': 'current_status'}
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    current_timestamp = int(time.time())
 
+    current_report = {'homework_name': 'current_status'}
     prev_report = {'homework_name': 'status'}
 
     while True:

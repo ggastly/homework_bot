@@ -42,6 +42,13 @@ class UndocumentedStatus(Exception):
         )
 
 
+class ResponseNotJSON(Exception):
+    def __init__(self):
+        super().__init__(
+            'Ответ не в формате json'
+        )
+
+
 class ErrorWithEndpoint(Exception):
     def __init__(self):
         super().__init__(
