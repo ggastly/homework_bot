@@ -20,7 +20,6 @@ RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-
 HOMEWORK_STATUSES = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
@@ -78,11 +77,11 @@ def check_response(response):
 
 def parse_status(homework):
     """Получает статус домашки и возвращает сообщение для бота."""
-    keys = [
+    HOMEWORK_KEYS = (
         'homework_name',
         'status'
-    ]
-    for key in keys:
+    )
+    for key in HOMEWORK_KEYS:
         if key not in homework:
             logger.error(f'Нет ожидаемого ключа: {key}')
             raise KeyError
@@ -99,12 +98,12 @@ def parse_status(homework):
 
 def check_tokens():
     """Проверяет необходимые токены."""
-    tokens = [
+    TOKENS = (
         PRACTICUM_TOKEN,
         TELEGRAM_TOKEN,
         TELEGRAM_CHAT_ID
-    ]
-    return all(tokens)
+    )
+    return all(TOKENS)
 
 
 def send_error(error, bot):
